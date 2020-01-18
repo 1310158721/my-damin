@@ -1,0 +1,1 @@
+const global = require('./global');
