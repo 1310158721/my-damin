@@ -41,5 +41,9 @@ export default {
       line-height: 50px;
     }
   }
+  .el-main {
+    padding: 0;
+    margin: 0;
+  }
 }
 </style>

@@ -6,6 +6,7 @@ import axios from 'axios';
 
 import 'reset.css';
 import '@/http/interceptors';
+import '@/components/global';
 
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';

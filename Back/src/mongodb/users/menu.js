@@ -104,7 +104,7 @@ class MENU {
   getMenuList() {
     this.app.get('/api/getMenuList', (req, res, next) => {
       const { roleId, inside } = req.query;
-      const { token } = req.cookies;
+      const { token } = req.signedCookies;
       const params = roleId ? { _id: roleId } : { token };
       this.UserModel.find(params)
         .then((doc) => {

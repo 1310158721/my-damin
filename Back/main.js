@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 // 支持 post 请求在 req.body 中获取 request payload 的参数
 app.use(bodyParser.json());
 // 支持前端调取接口时，后端能拿到浏览器的cookie
-app.use(cookieParser());
+app.use(cookieParser('admin')); // cookieParser 加密 token
 // express 静态托管资源
 app.use(express.static('./'));
 // app.use(express.static('./dist/'));
@@ -52,6 +52,7 @@ db.on('disconnected', () => {
 
 // 导入相关接口
 require('./src/mongodb');
+require('./src/upload/upload');
 
 // 应用监听端口
 app.listen(9000, () => {

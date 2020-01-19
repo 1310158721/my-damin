@@ -85,7 +85,7 @@ router.beforeEach((to, from, next) => {
     } else if (to.path !== '/LoginOut') {
       // 若 vuex 上的menuList 没有值，则调取接口获取值
       if (!store.state.menuList.length) {
-        $axios.get('/getMenuList', { params: { token } }).then(res => {
+        $axios.get('/getMenuList').then(res => {
           const { list } = res.data.result;
           if (process.env.NODE_ENV === 'development') {
             list.push({

@@ -12,7 +12,7 @@ const notMenuRoutes = [
           title: '个人中心',
           isNotMenu: true
         },
-        component: () => import('@/views/user/personal'),
+        component: () => import('@/views/User/personal'),
         children: null
       }
     ]

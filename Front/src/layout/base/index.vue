@@ -47,15 +47,12 @@ export default {
       display: block;
       min-height: 100%;
       overflow-y: auto;
-      #app-header {}
-      #app-content {}
     }
     &.fixed-header {
       height: 100%;
       overflow-y: hidden;
       display: flex;
       flex-direction: column;
-      #app-header {}
       #app-content {
         flex: 1;
         height: 100%;

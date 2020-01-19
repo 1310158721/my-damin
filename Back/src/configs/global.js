@@ -3,6 +3,8 @@
  */
 const DEV = require('./dev');
 const PROD = require('./prod');
-const isProd = true;
+const isProd = false;
 
 isProd ? PROD.start() : DEV.start();
+
+global.deleteOssPhotoTime = 2 * 3600 * 1000;
