@@ -3,7 +3,7 @@
  */
 const DEV = require('./dev');
 const PROD = require('./prod');
-const isProd = false;
+const isProd = true;
 
 isProd ? PROD.start() : DEV.start();
 

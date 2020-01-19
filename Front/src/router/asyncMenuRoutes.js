@@ -33,7 +33,7 @@ const asyncMenuRoutes = [
     path: '/NestedRoutes-1-1',
     name: 'NestedRoutes-1-1',
     meta: {
-      title: '路由-1'
+      title: '路由-1-1'
     },
     component: () => import('@/views/NestedRoutes/NestedRoutes-1-1'),
     children: null

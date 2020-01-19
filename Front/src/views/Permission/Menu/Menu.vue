@@ -1,7 +1,7 @@
 <template>
   <div class="permission-menu-wrapper">
     <div class="conditions-wrapper">
-      <el-button size='small'>新增用户</el-button>
+      <el-button size='small' type='success' @click='addItem'>新增用户</el-button>
       <span class="auto-flex"></span>
     </div>
     <div class="table-wrapper">
@@ -27,7 +27,7 @@
         <el-table-column label="Opertion" align='center'>
           <template slot-scope="scope">
             <el-button size='mini' type='primary' @click.native='handleEdit(scope.row._id)'>edit</el-button>
-            <el-button size='mini' type='warning'>delete</el-button>
+            <el-button size='mini' type='danger' @click.native='handleDelete(scope.row._id)'>delete</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -48,19 +48,26 @@
       :id='id'
       @closePermissionDialog='closePermissionDialog'
     />
+    <AddPermissionDialog
+      :addPermissionDialog='addPermissionDialog'
+      @closeAddPermissionDialog='closeAddPermissionDialog'
+      @surePermissionDialog='surePermissionDialog'
+    />
   </div>
 </template>
 
 <script>
 import { $formDate } from '@/assets/js/utils';
 import EditPermissionDialog from './Components/EditPermissionDialog';
+import AddPermissionDialog from './Components/AddPermissionDialog';
 export default {
-  name: "PermissionMenu",
+  name: 'PermissionMenu',
   components: {
-    EditPermissionDialog
+    EditPermissionDialog,
+    AddPermissionDialog
   },
   props: {},
-  data() {
+  data () {
     return {
       userInfos: null,
       count: 0,
@@ -69,13 +76,14 @@ export default {
         size: 20
       },
       id: null,
-      editPermissionDialog: false
+      editPermissionDialog: false,
+      addPermissionDialog: false
     };
   },
   computed: {},
   methods: {
-    getAllUserInfo(params) {
-      this.$axios.get("/getAllUserInfo", { params })
+    getAllUserInfo (params) {
+      this.$axios.get('/getAllUserInfo', { params })
         .then(res => {
           const { result, status } = res.data;
           if (status === 0) {
@@ -84,6 +92,9 @@ export default {
             this.userInfos = list;
           }
         });
+    },
+    async deleteSingleUserById (params) {
+      return await this.$axios.get('/deleteSingleUserById', { params });
     },
     handleSizeChange (val) {
       this.params.size = val;
@@ -97,19 +108,38 @@ export default {
       this.id = id;
       this.editPermissionDialog = true;
     },
-    closePermissionDialog() {
+    handleDelete (_id) {
+      this.deleteSingleUserById({_id})
+        .then((res) => {
+          const { status } = res.data;
+          if (status === 0) {
+            this.getAllUserInfo();
+          }
+        });
+    },
+    closePermissionDialog () {
       this.editPermissionDialog = false;
+    },
+    addItem () {
+      this.addPermissionDialog = true;
+    },
+    closeAddPermissionDialog () {
+      this.addPermissionDialog = false;
+    },
+    surePermissionDialog () {
+      this.addPermissionDialog = false;
+      this.getAllUserInfo();
     }
   },
   filters: {
-    formatCreatedTime(date) {
+    formatCreatedTime (date) {
       return $formDate(new Date(date), 'yyyy-MM-dd hh:mm:ss');
     }
   },
-  created() {
+  created () {
     this.getAllUserInfo(this.params);
   },
-  mounted() {},
+  mounted () {},
   watch: {}
 };
 </script>

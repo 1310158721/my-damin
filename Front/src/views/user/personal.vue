@@ -67,7 +67,7 @@ export default {
       } else {
         callback();
       }
-    }
+    };
     return {
       isLoading: false,
       defaultPics: [],
@@ -96,30 +96,30 @@ export default {
     };
   },
   computed: {
-    throttleSubmitForm() {
+    throttleSubmitForm () {
       return $throttle((ref) => this.submitForm(ref), 1000);
     }
   },
   methods: {
     ...mapMutations(['SETUSERINFO']),
-    async updateUserInfo(data) {
+    async updateUserInfo (data) {
       this.isLoading = true;
       return await this.$axios.post('/updateSingleUser', data);
     },
-    formatResult(result) {
+    formatResult (result) {
       result.createdTime = $formDate(new Date(result.createdTime), 'yyyy-MM-dd hh:mm:ss');
       result.avatar = [
         { name: 'avatar', url: result.avatar || defaultAvatar }
-      ]
+      ];
     },
-    removeCallBack(file, fileList) {
+    removeCallBack (file, fileList) {
       this.personalModel.avatar = fileList;
     },
-    successCallback(response, file, fileList) {
+    successCallback (response, file, fileList) {
       const url = response.result.url;
       this.personalModel.avatar = [{ name: 'avatar', url }];
     },
-    formatPernalModel() {
+    formatPernalModel () {
       const result = JSON.parse(JSON.stringify(this.personalModel));
       result.avatar = this.personalModel.avatar[0].url.includes('http') ? this.personalModel.avatar[0].url : '';
       return result;

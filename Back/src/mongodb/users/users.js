@@ -21,7 +21,8 @@ class USER {
       desc: String,
       token: String,
       role: String,
-      username: String,
+      name: String,
+      roleDesc: String,
       createdTime: Number
     });
 
@@ -155,9 +156,9 @@ class USER {
   }
 
   /**
-   * 更改单个用户信息
+   * 更改单个用户信息 (根据 token 值)
    */
-  UpdateSingleUser() {
+  UpdateSingleUserByToken() {
     this.app.post('/api/updateSingleUser', (req, res, next) => {
       const { account, password, name, avatar, mobile } = req.body;
       if (!account || !password || !name || !avatar || !mobile) {
@@ -185,6 +186,131 @@ class USER {
           })
       }
     });
+  }
+
+  /**
+   * 更改单个用户信息 (根据 _id 值)
+   */
+  UpdateSingleUserById() {
+    this.app.post('/api/updateSingleUserById', (req, res, next) => {
+      const { _id, permission } = req.body;
+      if (!_id || !permission) {
+        res.send({
+          result: null,
+          status: 400,
+          msg: '参数不能为空'
+        })
+      }
+      this.UserModel.findByIdAndUpdate(_id, { permission })
+        .then((doc) => {
+          if (doc) {
+            res.send({
+              result: null,
+              status: 0,
+              msg: '数据更新成功'
+            })
+          } else {
+            res.send({
+              result: null,
+              status: 400,
+              msg: '数据更新失败'
+            })
+          }
+        })
+    })
+  }
+
+  /**
+   * 新增单个用户
+   */
+  AddSingleUser () {
+    this.app.post('/api/addSingleUser', (req, res, next) => {
+      const { account, password, name, role, mobile, avatar, permission } = req.body;
+      if (!account || !password || !name || !role || !mobile || !avatar || !permission) {
+        res.send({
+          result: null,
+          status: 400,
+          msg: '参数不能为空'
+        })
+      } else {
+        const createdTime = Date.now();
+        let roleDesc = null;
+        switch (role) {
+          case 'COMMON':
+            roleDesc = '普通用户';
+            break;
+          case 'ADMIN':
+            roleDesc = '管理员';
+            break;
+          case 'SUPERADMIN':
+            roleDesc = '超级管理员';
+            break;
+          default:
+            roleDesc = '';
+            break;
+        }
+        const UserModel = this.UserModel;
+        console.log(name, role);
+        const addData = new UserModel({
+          account, password, name, role, roleDesc, avatar, mobile, createdTime
+        })
+        addData.save()
+          .then((doc) => {
+            if (doc) {
+              res.send({
+                result: null,
+                status: 0,
+                msg: '添加用户成功'
+              })
+            } else {
+              res.send({
+                result: err,
+                status: 400,
+                msg: '添加用户失败'
+              })
+            }
+          })
+          .catch((err) => {
+            res.send({
+              result: err,
+              status: 400,
+              msg: '添加用户出错'
+            })
+          })
+      }
+    })
+  }
+
+  /**
+   * 根据 _id 删除单个用户
+   */
+  DeleteSingleUserById() {
+    this.app.get('/api/deleteSingleUserById', (req, res, next) => {
+      const { _id } = req.query;
+      this.UserModel.findByIdAndDelete(_id)
+        .then((doc) => {
+          if (doc) {
+            res.send({
+              result: null,
+              status: 0,
+              msg: '删除用户成功'
+            })
+          } else {
+            res.send({
+              result: null,
+              status: 400,
+              msg: '删除用户失败'
+            })
+          }
+        })
+        .catch((err) => {
+          res.send({
+            result: err,
+            status: 400,
+            msg: '删除用户出错'
+          })
+        })
+    })
   }
 
   /**
@@ -225,7 +351,10 @@ class USER {
     this.GoLogin();
     this.GetSingleUser();
     this.GetAllUserAInfo();
-    this.UpdateSingleUser();
+    this.UpdateSingleUserByToken();
+    this.UpdateSingleUserById();
+    this.AddSingleUser();
+    this.DeleteSingleUserById();
     this.DeleteAliOssPhotos();
   }
 }
