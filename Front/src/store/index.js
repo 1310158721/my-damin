@@ -6,6 +6,7 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     menuList: [],
+    userInfo: null,
     isFixedSystemAside: true,
     isFixedHeader: true,
     isShowSystemTabView: true,
@@ -18,6 +19,9 @@ export default new Vuex.Store({
     // 重置 vuex 中的 layoutConfigDrawer(系统布局抽屉)
     SETLAYOUTCONFIGDRAWER (state, boolean) {
       state.layoutConfigDrawer = boolean;
+    },
+    SETUSERINFO(state, data) {
+      state.userInfo = data;
     }
   },
   actions: {

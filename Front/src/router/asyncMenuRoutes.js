@@ -82,6 +82,15 @@ const asyncMenuRoutes = [
     },
     component: () => import('@/views/NestedRoutes/NestedRoutes-2'),
     children: null
+  },
+  {
+    path: '/PermissionMenu',
+    name: 'PermissionMenu',
+    meta: {
+      title: '权限菜单'
+    },
+    component: () => import('@/views/Permission/Menu/Menu'),
+    children: null
   }
 ];
 

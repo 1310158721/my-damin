@@ -13,6 +13,7 @@ if (process.env.NODE_ENV === 'development') {
 
 import NProgress from 'nprogress'; // 页面加载进度条
 import 'nprogress/nprogress.css';
+import Axios from 'axios';
 
 // NProgress 的简单配置
 NProgress.configure({ easing: 'ease', speed: 500, showSpinner: false });
@@ -85,29 +86,37 @@ router.beforeEach((to, from, next) => {
     } else if (to.path !== '/LoginOut') {
       // 若 vuex 上的menuList 没有值，则调取接口获取值
       if (!store.state.menuList.length) {
-        $axios.get('/getMenuList').then(res => {
-          const { list } = res.data.result;
-          if (process.env.NODE_ENV === 'development') {
-            list.push({
-              title: '方便测试',
-              icon: 'icon-ceshi',
-              children: null
-            });
-          }
-          // 遍历获取菜单栏对应的路由以及重新处理菜单栏的数据（为每一项添加一个path属性）
-          list.map(i => {
-            getAsyncRoutes(i);
-          });
-          // vuex 保存处理好的 菜单栏数据
-          store.commit('RESETMENULIST', list);
-          // router 添加处理好的路由数据
-          router.addRoutes([asyncMenuRoutesFirst, ...notMenuRoutes]);
-          // 跳转路由
-          next({
-            path: to.fullPath,
-            replace: true
-          });
-        });
+        $axios.get('/getSingleUser')
+          .then((response) => {
+            const { result, status } = response.data;
+            if (status === 0) {
+              store.commit('SETUSERINFO', result);
+              $axios.get('/getMenuList')
+                .then(res => {
+                  const { list } = res.data.result;
+                  if (process.env.NODE_ENV === 'development') {
+                    list.push({
+                      title: '方便测试',
+                      icon: 'icon-ceshi',
+                      children: null
+                    });
+                  }
+                  // 遍历获取菜单栏对应的路由以及重新处理菜单栏的数据（为每一项添加一个path属性）
+                  list.map(i => {
+                    getAsyncRoutes(i);
+                  });
+                  // vuex 保存处理好的 菜单栏数据
+                  store.commit('RESETMENULIST', list);
+                  // router 添加处理好的路由数据
+                  router.addRoutes([asyncMenuRoutesFirst, ...notMenuRoutes]);
+                  // 跳转路由
+                  next({
+                    path: to.fullPath,
+                    replace: true
+                  });
+                });
+            }
+          })
       } else {
         cacheRoutes = jsCookie.get('cacheRoutes') ? JSON.parse(jsCookie.get('cacheRoutes')) : [];
         if (!cacheRoutes.filter((i) => i.path === to.path).length && !to.meta.isNotMenu) {

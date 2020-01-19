@@ -81,8 +81,10 @@ class USER {
    */
   GetSingleUser() {
     this.app.get('/api/getSingleUser', (req, res, next) => {
+      const { _id = '' } = req.query;
       const { token } = req.signedCookies;
-      this.UserModel.find({ token }, { _id: 0, token: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
+      const conditions = _id ? { _id } : { token }
+      this.UserModel.find(conditions, { _id: 0, token: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
         .then((doc) => {
           if(!doc.length) {
             res.send({
@@ -103,6 +105,50 @@ class USER {
             status: 400,
             result: err,
             msg: '查询用户信息失败'
+          })
+        })
+    });
+  }
+
+  /**
+   * 获取所有的用户信息
+   */
+  GetAllUserAInfo() {
+    this.app.get('/api/getAllUserInfo', (req, res, next) => {
+      this.UserModel.countDocuments()
+        .then((count) => {
+          this.UserModel.find({}, { token: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
+            .then((doc) => {
+              if(!doc.length) {
+                res.send({
+                  status: 400,
+                  result: null,
+                  msg: '找不到当前用户信息'
+                })
+              } else {
+                res.send({
+                  status: 0,
+                  result: {
+                    list: doc,
+                    count
+                  },
+                  msg: '查询用户信息成功'
+                })
+              }
+            })
+            .catch((err) => {
+              res.send({
+                status: 400,
+                result: err,
+                msg: '查询用户信息失败'
+              })
+            })
+        })
+        .catch((err) => {
+          res.send({
+            result: err,
+            status: 400,
+            msg: '查询用户总条数失败'
           })
         })
     });
@@ -178,6 +224,7 @@ class USER {
   Start() {
     this.GoLogin();
     this.GetSingleUser();
+    this.GetAllUserAInfo();
     this.UpdateSingleUser();
     this.DeleteAliOssPhotos();
   }

@@ -55,6 +55,7 @@
 import { $formDate, $throttle } from '@/assets/js/utils';
 import defaultAvatar from '@/assets/img/default.jpg';
 import { RegExp } from '@/assets/js/constant';
+import { mapMutations } from 'vuex';
 export default {
   name: 'Personal',
   components: {},
@@ -100,11 +101,7 @@ export default {
     }
   },
   methods: {
-    async getUserInfo() {
-      this.isLoading = true;
-      this.personalModel = {};
-      return await this.$axios.get('/getSingleUser');
-    },
+    ...mapMutations(['SETUSERINFO']),
     async updateUserInfo(data) {
       this.isLoading = true;
       return await this.$axios.post('/updateSingleUser', data);
@@ -125,13 +122,7 @@ export default {
     formatPernalModel() {
       const result = JSON.parse(JSON.stringify(this.personalModel));
       result.avatar = this.personalModel.avatar[0].url.includes('http') ? this.personalModel.avatar[0].url : '';
-      return Object.assign({}, {
-        account: result.account,
-        password: result.password,
-        name: result.name,
-        avatar: result.avatar,
-        mobile: result.mobile
-      });
+      return result;
     },
     submitForm (ref) {
       this.$refs[ref].validate((valid) => {
@@ -141,6 +132,7 @@ export default {
               const { status, result } = res.data;
               if (status === 0) {
                 this.isLoading = false;
+                this.SETUSERINFO(this.formatPernalModel());
               }
             });
         } else {
@@ -151,16 +143,10 @@ export default {
     }
   },
   created () {
-    this.getUserInfo()
-      .then((res) => {
-        const { status, result } = res.data;
-        if (status === 0) {
-          this.isLoading = false;
-          this.formatResult(result);
-          this.personalModel = result;
-          this.defaultPics = result.avatar;
-        }
-      })
+    const result = this.$store.state.userInfo;
+    this.formatResult(result);
+    this.personalModel = result;
+    this.defaultPics = result.avatar;
   },
   mounted () {},
   watch: {}

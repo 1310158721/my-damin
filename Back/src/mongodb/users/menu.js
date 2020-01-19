@@ -46,7 +46,7 @@ class MENU {
    */
   loopMatchList (hasPermission, list) {
     for (let i = list.length - 1; i >= 0; i--) {
-      if (!list[i].children || !list[i].children.length) {
+      if (!list[i].children) {
         if (!hasPermission.includes(list[i].permission)) {
           list.splice(i, 1);
         }
@@ -77,8 +77,8 @@ class MENU {
   /**
    * 获取菜单栏所有项
    */
-  getAllMenuItem() {
-    this.app.get('/api/getAllMenuItem', (req, res, next) => {
+  GetAllMenu() {
+    this.app.get('/api/getAllMenu', (req, res, next) => {
       this.MenuListModel.find()
         .then((doc) => {
           if (!doc.length) {
@@ -101,7 +101,7 @@ class MENU {
   /**
    * 获取单个用户权限菜单菜单栏接口
    */
-  getMenuList() {
+  GetPermissionMenu() {
     this.app.get('/api/getMenuList', (req, res, next) => {
       const { roleId, inside } = req.query;
       const { token } = req.signedCookies;
@@ -118,7 +118,7 @@ class MENU {
             const { username, desc, permission, role, avatar, mobile, password, account } = doc[0];
             const hasPermission = permission.split(',');
             this.MenuListModel
-              .find({})
+              .find({}, { _id: 0 })
               .sort({ order: 1 })
               .then((list) => {
                 if (!inside) {
@@ -148,8 +148,8 @@ class MENU {
    * 指定开启接口
    */
   Start() {
-    this.getAllMenuItem();
-    this.getMenuList();
+    this.GetAllMenu();
+    this.GetPermissionMenu();
   }
 }
 

@@ -13,7 +13,9 @@ export default {
   computed: {},
   methods: {},
   created () {},
-  mounted () {},
+  mounted () {
+    console.log(this.$store.state.userInfo);
+  },
   watch: {}
 };
 </script>
