@@ -63,6 +63,20 @@ const getAsyncRoutes = item => {
   }
 };
 
+/**
+ * 获取单用户信息接口
+ */
+function getSingleUser () {
+  return $axios.get('/getSingleUser');
+};
+
+/**
+ * 获取权限菜单信息
+ */
+function getMenuList() {
+  return $axios.get('/getMenuList')
+};
+
 let cacheRoutes = jsCookie.get('cacheRoutes') ? JSON.parse(jsCookie.get('cacheRoutes')) : [ { path: '/Dashboard', title: 'Dashboard' } ];
 
 router.beforeEach((to, from, next) => {
@@ -86,37 +100,40 @@ router.beforeEach((to, from, next) => {
     } else if (to.path !== '/LoginOut') {
       // 若 vuex 上的menuList 没有值，则调取接口获取值
       if (!store.state.menuList.length) {
-        $axios.get('/getSingleUser')
-          .then((response) => {
-            const { result, status } = response.data;
-            if (status === 0) {
-              store.commit('SETUSERINFO', result);
-              $axios.get('/getMenuList')
-                .then(res => {
-                  const { list } = res.data.result;
-                  if (process.env.NODE_ENV === 'development') {
-                    list.push({
-                      title: '方便测试',
-                      icon: 'icon-ceshi',
-                      children: null
-                    });
-                  }
-                  // 遍历获取菜单栏对应的路由以及重新处理菜单栏的数据（为每一项添加一个path属性）
-                  list.map(i => {
-                    getAsyncRoutes(i);
-                  });
-                  // vuex 保存处理好的 菜单栏数据
-                  store.commit('RESETMENULIST', list);
-                  // router 添加处理好的路由数据
-                  router.addRoutes([asyncMenuRoutesFirst, ...notMenuRoutes]);
-                  // 跳转路由
-                  next({
-                    path: to.fullPath,
-                    replace: true
-                  });
-                });
+        // axios 并发优化处理
+        $axios.all([getSingleUser(), getMenuList()])
+          .then($axios.spread((singleUser, allMenu) => {
+            const singleUserStatus = singleUser.data.status;
+            const singleUserResult = singleUser.data.result;
+            const allMenuStatus = allMenu.data.status;
+            const allMenuResult = allMenu.data.result;
+            if (singleUserStatus === 0) {
+              store.commit('SETUSERINFO', singleUserResult);
             }
-          })
+            if (allMenuStatus === 0) {
+              const { list } = allMenuResult;
+              if (process.env.NODE_ENV === 'development') {
+                list.push({
+                  title: '方便测试',
+                  icon: 'icon-ceshi',
+                  children: null
+                });
+              }
+              // 遍历获取菜单栏对应的路由以及重新处理菜单栏的数据（为每一项添加一个path属性）
+              list.map(i => {
+                getAsyncRoutes(i);
+              });
+              // vuex 保存处理好的 菜单栏数据
+              store.commit('RESETMENULIST', list);
+              // router 添加处理好的路由数据
+              router.addRoutes([asyncMenuRoutesFirst, ...notMenuRoutes]);
+              // 跳转路由
+              next({
+                path: to.fullPath,
+                replace: true
+              });
+            }
+          }))
       } else {
         cacheRoutes = jsCookie.get('cacheRoutes') ? JSON.parse(jsCookie.get('cacheRoutes')) : [];
         if (!cacheRoutes.filter((i) => i.path === to.path).length && !to.meta.isNotMenu) {

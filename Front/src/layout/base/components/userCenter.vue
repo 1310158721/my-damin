@@ -4,8 +4,7 @@
     trigger="click"
     class="user-center-wrapper"
   >
-    <!-- <div class="center-button"></div> -->
-    <el-avatar class="center-button" :size="50" :src="avatarUrl" />
+    <el-avatar class="center-button" :size="50" :src="$store.state.userInfo.avatar" />
     <el-dropdown-menu slot="dropdown">
       <el-dropdown-item
         v-for="(item, index) in dropdownEnum"
@@ -93,7 +92,9 @@ export default {
       }).catch(() => {});
     }
   },
-  created () {},
+  created () {
+    console.log(this.$store.state.userInfo.avatar);
+  },
   mounted () {},
   watch: {}
 };

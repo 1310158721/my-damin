@@ -87,19 +87,11 @@ class USER {
       const conditions = _id ? { _id } : { token }
       this.UserModel.find(conditions, { _id: 0, token: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
         .then((doc) => {
-          if(!doc.length) {
-            res.send({
-              status: 400,
-              result: null,
-              msg: '找不到当前用户信息'
-            })
-          } else {
-            res.send({
-              status: 0,
-              result: doc[0],
-              msg: '查询用户信息成功'
-            })
-          }
+          res.send({
+            status: 0,
+            result: doc.length ? doc[0] : [],
+            msg: '查询用户信息成功'
+          })
         })
         .catch((err) => {
           res.send({
@@ -116,40 +108,74 @@ class USER {
    */
   GetAllUserAInfo() {
     this.app.get('/api/getAllUserInfo', (req, res, next) => {
-      this.UserModel.countDocuments()
-        .then((count) => {
-          this.UserModel.find({}, { token: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
-            .then((doc) => {
-              if(!doc.length) {
-                res.send({
-                  status: 400,
-                  result: null,
-                  msg: '找不到当前用户信息'
-                })
-              } else {
-                res.send({
-                  status: 0,
-                  result: {
-                    list: doc,
-                    count
-                  },
-                  msg: '查询用户信息成功'
-                })
+      const { token } = req.signedCookies;
+      this.UserModel.find({ token })
+        .then((singleUser) => {
+          const role = singleUser[0].role;
+          // 过滤条件
+          let filter = [];
+          if (role === 'SUPERADMIN') {
+            filter = [{ role: 'SUPERADMIN' }]
+          }
+          if (role === 'ADMIN') {
+            filter = [{ role: 'SUPERADMIN' }, { role: 'ADMIN' }]
+          }
+          let { page = 1, size = 20, keyword = '', startTime = '', endTime = '', roleLevel = '' } = req.query;
+          // 时间临界值处理
+          startTime = startTime ? new Date(startTime + " 00:00:00") : null;
+          endTime = endTime ? new Date(endTime + ' 23:59:59') : null;
+          const conditions = {
+            // 搜索条件的交集 $and
+            $and: [
+              {
+                // 关键字模糊搜索
+                $or: [
+                  { name: { $regex: keyword, $options: '$i' } },
+                  { mobile: { $regex: keyword, $options: '$i' } }
+                ]
               }
+            ]
+          }
+          // 添加时间段搜索
+          if (startTime && endTime) {
+            conditions.$and.push({ createdTime: {$gte: new Date(startTime), $lte: new Date(endTime)} })
+          }
+
+          if (roleLevel) {
+            conditions.$and.push({ role: roleLevel })
+          }
+          this.UserModel.find(conditions, { token: 0, __v: 0 }) // 第一个参数指定要过滤的某些参数，设置为0表示不暴露给api
+          .limit(Number.parseInt(size))
+          .skip(Number.parseInt(page - 1) * size)
+          .sort({createdTime: -1})
+          .nor(filter)
+          .then((doc) => {
+            // 当前登录用户为超级管理员时，可以操作自身的数据
+            if (role === 'SUPERADMIN') {
+              doc.unshift(singleUser[0]);
+            }
+            res.send({
+              status: 0,
+              result: {
+                list: doc,
+                count: doc.length
+              },
+              msg: '查询用户信息成功'
             })
-            .catch((err) => {
-              res.send({
-                status: 400,
-                result: err,
-                msg: '查询用户信息失败'
-              })
+          })
+          .catch((err) => {
+            res.send({
+              status: 400,
+              result: err,
+              msg: '查询用户信息失败'
             })
+          })
         })
         .catch((err) => {
           res.send({
             result: err,
             status: 400,
-            msg: '查询用户总条数失败'
+            msg: '获取用户信息失败'
           })
         })
     });
@@ -193,30 +219,43 @@ class USER {
    */
   UpdateSingleUserById() {
     this.app.post('/api/updateSingleUserById', (req, res, next) => {
-      const { _id, permission } = req.body;
-      if (!_id || !permission) {
+      const { _id, permission, role } = req.body;
+      if (!_id || !permission || !role) {
         res.send({
           result: null,
           status: 400,
           msg: '参数不能为空'
         })
+      } else {
+        let roleDesc = null;
+        switch (role) {
+          case 'SUPERADMIN':
+            roleDesc = '超级管理员';
+            break;
+          case 'ADMIN':
+            roleDesc = '管理员';
+            break;
+          default:
+            roleDesc = '普通用户';
+            break;
+        }
+        this.UserModel.findByIdAndUpdate(_id, { permission, role, roleDesc })
+          .then((doc) => {
+            if (doc) {
+              res.send({
+                result: null,
+                status: 0,
+                msg: '数据更新成功'
+              })
+            } else {
+              res.send({
+                result: null,
+                status: 400,
+                msg: '数据更新失败'
+              })
+            }
+          })
       }
-      this.UserModel.findByIdAndUpdate(_id, { permission })
-        .then((doc) => {
-          if (doc) {
-            res.send({
-              result: null,
-              status: 0,
-              msg: '数据更新成功'
-            })
-          } else {
-            res.send({
-              result: null,
-              status: 400,
-              msg: '数据更新失败'
-            })
-          }
-        })
     })
   }
 
@@ -233,6 +272,7 @@ class USER {
           msg: '参数不能为空'
         })
       } else {
+        const token = account;
         const createdTime = Date.now();
         let roleDesc = null;
         switch (role) {
@@ -250,9 +290,8 @@ class USER {
             break;
         }
         const UserModel = this.UserModel;
-        console.log(name, role);
         const addData = new UserModel({
-          account, password, name, role, roleDesc, avatar, mobile, createdTime
+          account, password, name, role, roleDesc, avatar, mobile, createdTime, permission, token
         })
         addData.save()
           .then((doc) => {

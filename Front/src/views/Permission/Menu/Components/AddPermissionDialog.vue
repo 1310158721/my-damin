@@ -25,7 +25,7 @@
         <el-input v-model="addPermissionModel.name" placeholder='请输入名称' />
       </el-form-item>
       <el-form-item size="small" label="级别：">
-        <el-select size='small' v-model="addPermissionModel.role" placeholder="请选择">
+        <el-select size='small' v-model="addPermissionModel.role" placeholder="请选择" @change='roleChange'>
           <el-option
             v-for="item in roleOptions"
             :key="item.value"
@@ -62,13 +62,11 @@
           show-checkbox
           node-key="permission"
           ref="tree"
-          check-on-click-node
           default-expand-all
-          check-strictly
-          :default-checked-keys="['DASHBOARD']"
+          :default-checked-keys="addPermissionModel.permission"
           expand-on-click-node
-          @node-click="nodeClick"
           :props="defaultProps"
+          @check='handleCheck'
         />
       </el-form-item>
     </el-form>
@@ -107,7 +105,7 @@ export default {
         name: '',
         mobile: '',
         avatar: '',
-        permission: '',
+        permission: ['DASHBOARD'],
         role: 'COMMON'
       },
       editPermissionRules: {
@@ -135,15 +133,24 @@ export default {
       defaultProps: {
         children: 'children',
         label: 'title'
-      },
-      roleOptions: [
-        { label: '普通用户', value: 'COMMON' },
-        { label: '管理员', value: 'ADMIN' },
-        { label: '超级管理员', value: 'SUPERADMIN' }
-      ]
+      }
     };
   },
-  computed: {},
+  computed: {
+    roleOptions() {
+      if (this.$store.state.userInfo.role !== 'SUPERADMIN') {
+        return [
+          { label: '普通用户', value: 'COMMON' }
+        ]
+      } else {
+        return [
+          { label: '普通用户', value: 'COMMON' },
+          { label: '管理员', value: 'ADMIN' },
+          { label: '超级管理员', value: 'SUPERADMIN' }
+        ]
+      }
+    }
+  },
   methods: {
     async getAllMenu () {
       return await this.$axios.get('/getAllMenu');
@@ -163,30 +170,17 @@ export default {
     closeAddPermissionDialog () {
       this.$emit('closeAddPermissionDialog');
     },
-    nodeClick (data, node) {
-      this.childNodesChange(node);
-      this.parentNodesChange(node);
-    },
-    childNodesChange (node) {
-      let len = node.childNodes.length;
-      for (let i = 0; i < len; i++) {
-        node.childNodes[i].checked = false;
-        this.childNodesChange(node.childNodes[i]);
-      }
-    },
-    parentNodesChange (node) {
-      if (node.parent) {
-        for (let key in node) {
-          if (key == 'parent') {
-            node[key].checked = true;
-            this.parentNodesChange(node[key]);
-          }
-        }
-      }
-    },
     cancelPermissionDialog (formName) {
       this.$refs[formName].resetFields();
-      this.addPermissionModel = {};
+      this.addPermissionModel = {
+        account: '',
+        password: '',
+        name: '',
+        mobile: '',
+        avatar: '',
+        permission: ['DASHBORAD'],
+        role: 'COMMON'
+      };
       this.closeAddPermissionDialog();
     },
     surePermissionDialog (formName) {
@@ -194,8 +188,8 @@ export default {
           if (valid) {
             let selectPermissionKey = this.$refs.tree.getCheckedKeys();
             selectPermissionKey = selectPermissionKey.filter(i => i).join(',');
-            this.addPermissionModel.permission = selectPermissionKey;
-            this.addSingleUser(this.addPermissionModel)
+            const params = Object.assign({}, this.addPermissionModel, { permission: selectPermissionKey });
+            this.addSingleUser(params)
               .then((res) => {
                 const { status } = res.data;
                 if (status === 0) {
@@ -213,11 +207,70 @@ export default {
     },
     successCallback (response) {
       this.addPermissionModel.avatar = response.result.url;
+    },
+    /**
+     * 获取 list 里面的所有 permission 值
+     */
+    getPermissionLoop(list, arr = []) {
+      list.map((i) => {
+        if (i.children && i.children.length) {
+          this.getPermissionLoop(i.children, arr);
+        }
+        arr.push(i.permission);
+      })
+    },
+    handleCheck () {
+      // 获取 当前树形控件选中的菜单key值
+      let checkedKeys = this.$refs.tree.getCheckedKeys();
+      // 获取 导航菜单权限管理模块数据
+      const list = this.menuList.filter((i) => i.permission === 'PERMISSIONMANAGE');
+      const permissionArr = [];
+      const isAll = [];
+      // 获取 导航菜单权限管理相关的权限
+      this.getPermissionLoop(list, permissionArr);
+      // 获取 所有导航菜单相关的权限
+      this.getPermissionLoop(this.menuList, isAll);
+      let isExsit = false;
+      permissionArr.map((i) => {
+        if (checkedKeys.includes(i)) {
+          isExsit = true;
+        }
+      })
+
+      if (!isExsit) {
+        this.addPermissionModel.role = 'COMMON';
+      } else {
+        if (isAll.length === checkedKeys.length) {
+          this.addPermissionModel.role = 'SUPERADMIN';
+        } else {
+          this.addPermissionModel.role = 'ADMIN';
+        }
+      }
+    },
+    /**
+     * 权限级别改变
+     * 级别 COMMON: 导航菜单不能有权限管理（PERMISSIONMANAGE）的
+     * 级别 ADMIN：导航菜单有权限管理（PERMISSIONMANAGE），但默认不会全选
+     * 级别 SUPERADMIN：导航菜单有权限管理（PERMISSIONMANAGE），默认全选
+     */
+    roleChange(val) {
+      const list = this.menuList.filter((i) => i.permission === 'PERMISSIONMANAGE');
+      const permissionArr = [];
+      let checkedKeys = this.$refs.tree.getCheckedKeys();
+      if (val === 'COMMON') {
+        this.getPermissionLoop(list, permissionArr);
+        checkedKeys = checkedKeys.filter((i) => !permissionArr.includes(i));
+        this.$refs.tree.setCheckedKeys(checkedKeys);
+      } else if(val === 'ADMIN') {
+        this.getPermissionLoop(list, permissionArr);
+        checkedKeys = [... new Set([...checkedKeys, ...permissionArr])];
+        this.$refs.tree.setCheckedKeys(checkedKeys);
+      } else {
+        this.getPermissionLoop(this.menuList, permissionArr);
+        this.$refs.tree.setCheckedKeys(permissionArr);
+      }
     }
-  },
-  created () {},
-  mounted () {},
-  watch: {}
+  }
 };
 </script>
 
@@ -230,7 +283,7 @@ export default {
       box-shadow: 0px 5px 5px rgba(0, 0, 0, 0.2);
     }
     .el-dialog__body {
-      height: 420px;
+      height: 60vh;
       overflow: auto;
       .avatar {
         width: 144px;

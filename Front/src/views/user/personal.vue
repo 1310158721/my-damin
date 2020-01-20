@@ -61,13 +61,6 @@ export default {
   components: {},
   props: {},
   data () {
-    const validateAvatar = (rule, value, callback) => {
-      if (!value || !value.length) {
-        callback(new Error('头像不能为空'));
-      } else {
-        callback();
-      }
-    };
     return {
       isLoading: false,
       defaultPics: [],
@@ -90,7 +83,7 @@ export default {
           { pattern: RegExp.MOBILE, message: '号码格式不正确'}
         ],
         avatar: [
-          { validator: validateAvatar }
+          { required: true, message: '请上传头像' }
         ]
       }
     };
@@ -108,9 +101,6 @@ export default {
     },
     formatResult (result) {
       result.createdTime = $formDate(new Date(result.createdTime), 'yyyy-MM-dd hh:mm:ss');
-      result.avatar = [
-        { name: 'avatar', url: result.avatar || defaultAvatar }
-      ];
     },
     removeCallBack (file, fileList) {
       this.personalModel.avatar = fileList;
@@ -132,7 +122,7 @@ export default {
               const { status, result } = res.data;
               if (status === 0) {
                 this.isLoading = false;
-                this.SETUSERINFO(this.formatPernalModel());
+                this.SETUSERINFO(this.formatPernalModel())
               }
             });
         } else {
@@ -146,7 +136,7 @@ export default {
     const result = this.$store.state.userInfo;
     this.formatResult(result);
     this.personalModel = result;
-    this.defaultPics = result.avatar;
+    this.defaultPics = [{name: 'avatar', url: result.avatar}];
   },
   mounted () {},
   watch: {}

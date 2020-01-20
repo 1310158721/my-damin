@@ -74,26 +74,63 @@ class MENU {
     }
   }
 
+  // 将 buttons 转化为 children 传递给权限列表
+  dealListButtonsPermission(list) {
+    list.map((i) => {
+      if (i.children && i.children.length) {
+        this.dealListButtonsPermission(i.children);
+      } else {
+        if (i.buttons) {
+          i.children = i.buttons;
+        }
+      }
+    })
+  }
+
   /**
    * 获取菜单栏所有项
    */
   GetAllMenu() {
     this.app.get('/api/getAllMenu', (req, res, next) => {
-      this.MenuListModel.find()
-        .then((doc) => {
-          if (!doc.length) {
+      const { token } = req.signedCookies;
+      this.UserModel.find({ token })
+        .then((user) => {
+          if (user.length) {
+            const { role } = user[0]
+            this.MenuListModel.find()
+              .then((doc) => {
+                if (!doc.length) {
+                  res.send({
+                    result: null,
+                    status: 0,
+                    msg: '获取菜单栏所有项失败'
+                  })
+                } else{
+                  this.dealListButtonsPermission(doc);
+                  if (role !== 'SUPERADMIN') {
+                    doc = doc.filter((i) => i.permission !== 'PERMISSIONMANAGE');
+                  }
+                  res.send({
+                    result: doc,
+                    status: 0,
+                    msg: '获取菜单栏所有数据成功'
+                  })
+                }
+              })
+          } else {
             res.send({
-              result: null,
-              status: 0,
-              msg: '获取菜单栏所有项失败'
-            })
-          } else{
-            res.send({
-              result: doc,
-              status: 0,
-              msg: '获取菜单栏所有数据成功'
+              result: err,
+              status: 400,
+              msg: '获取用户信息失败'
             })
           }
+        })
+        .catch((err) => {
+          res.send({
+            result: err,
+            status: 400,
+            msg: '获取用户信息出错'
+          })
         })
     })
   }
