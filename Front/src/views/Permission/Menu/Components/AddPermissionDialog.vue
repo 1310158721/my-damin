@@ -3,9 +3,13 @@
     title="新增用户"
     class="add-permission-dialog"
     :visible.sync="addPermissionDialog"
-    @open="handleDialogOpen"
+    @opened="handleDialogOpen"
     width="800px"
-    :before-close="closeAddPermissionDialog"
+    modal-append-to-body
+    append-to-body
+    :show-close='false'
+    :close-on-click-modal='false'
+    :close-on-press-escape='false'
   >
     <el-form
       :model="addPermissionModel"
@@ -55,7 +59,7 @@
         size="small"
         label="权限菜单："
         prop="permission"
-        v-if="menuList"
+        v-show='menuList'
       >
         <el-tree
           :data="menuList"
@@ -91,13 +95,6 @@ export default {
     }
   },
   data () {
-    const validateAvatar = (rule, value, callback) => {
-      if (!value || !value.length) {
-        callback(new Error('头像不能为空'));
-      } else {
-        callback();
-      }
-    };
     return {
       addPermissionModel: {
         account: '',
@@ -105,7 +102,7 @@ export default {
         name: '',
         mobile: '',
         avatar: '',
-        permission: ['DASHBOARD'],
+        permission: [],
         role: 'COMMON'
       },
       editPermissionRules: {
@@ -126,7 +123,7 @@ export default {
           { pattern: RegExp.MOBILE, message: '号码格式不正确'}
         ],
         avatar: [
-          { validator: validateAvatar }
+          { required: true, message: '请上传头像' }
         ]
       },
       menuList: null,
@@ -158,18 +155,18 @@ export default {
     async addSingleUser (data) {
       return await this.$axios.post('/addSingleUser', data);
     },
+    // 弹窗显示时钩子
     handleDialogOpen () {
       this.getAllMenu()
         .then((res) => {
           const { result, status } = res.data;
           if (status === 0) {
             this.menuList = result;
+            this.$refs.tree.setCheckedKeys(['DASHBOARD']);
           }
         });
     },
-    closeAddPermissionDialog () {
-      this.$emit('closeAddPermissionDialog');
-    },
+    // 弹窗取消按钮事件
     cancelPermissionDialog (formName) {
       this.$refs[formName].resetFields();
       this.addPermissionModel = {
@@ -178,10 +175,10 @@ export default {
         name: '',
         mobile: '',
         avatar: '',
-        permission: ['DASHBORAD'],
+        permission: [],
         role: 'COMMON'
       };
-      this.closeAddPermissionDialog();
+      this.$emit('closeAddPermissionDialog');
     },
     surePermissionDialog (formName) {
       this.$refs[formName].validate((valid) => {
@@ -254,23 +251,35 @@ export default {
      * 级别 SUPERADMIN：导航菜单有权限管理（PERMISSIONMANAGE），默认全选
      */
     roleChange(val) {
+      // 获取 权限管理相关的 菜单模块
       const list = this.menuList.filter((i) => i.permission === 'PERMISSIONMANAGE');
+      // 保存权限管理模块相关/所有导航菜单模块的所有 permission 值
       const permissionArr = [];
+      // 获取 当前树形控件已选的key值
       let checkedKeys = this.$refs.tree.getCheckedKeys();
       if (val === 'COMMON') {
+        // 此时 permissionArr 代表 权限管理模块相关的所有 permission 值
         this.getPermissionLoop(list, permissionArr);
+        // 将树形控件已选的 key 过滤掉 权限管理相关的 key 值
         checkedKeys = checkedKeys.filter((i) => !permissionArr.includes(i));
+        // 将过滤后的 key 值，设置到属性控件上
         this.$refs.tree.setCheckedKeys(checkedKeys);
       } else if(val === 'ADMIN') {
+        // 此时 permissionArr 代表 权限管理模块相关的所有 permission 值
         this.getPermissionLoop(list, permissionArr);
+        // 将当前树形控件已选的 key 值 与 权限管理模块相关的 permission 合并
         checkedKeys = [... new Set([...checkedKeys, ...permissionArr])];
+        // 将合并后的 permission 值设置到 树形控件上
         this.$refs.tree.setCheckedKeys(checkedKeys);
       } else {
+        // 此时 permissionArr 代表 所有导航菜单模块的所有 permission 值
         this.getPermissionLoop(this.menuList, permissionArr);
+        // 全选树形控件的 key 值
         this.$refs.tree.setCheckedKeys(permissionArr);
       }
     }
-  }
+  },
+  created() {}
 };
 </script>
 
@@ -280,10 +289,13 @@ export default {
     .el-dialog__header {
       position: relative;
       z-index: 10;
+      height: 56px;
+      box-sizing: border-box;
+      padding: 12px 24px;
       box-shadow: 0px 5px 5px rgba(0, 0, 0, 0.2);
     }
     .el-dialog__body {
-      height: 60vh;
+      height: 55vh;
       overflow: auto;
       .avatar {
         width: 144px;
@@ -294,6 +306,9 @@ export default {
     .el-dialog__footer {
       position: relative;
       z-index: 10;
+      height: 56px;
+      box-sizing: border-box;
+      padding: 12px 24px;
       box-shadow: 0px -5px 5px rgba(0, 0, 0, 0.2);
     }
   }

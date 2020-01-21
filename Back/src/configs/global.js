@@ -7,4 +7,4 @@ const isProd = false;
 
 isProd ? PROD.start() : DEV.start();
 
-global.deleteOssPhotoTime = 2 * 3600 * 1000;
+global.deleteOssPhotoTime = 1000 * 60 * 60 * 0.5;

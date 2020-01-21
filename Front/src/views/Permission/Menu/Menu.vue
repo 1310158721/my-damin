@@ -36,6 +36,7 @@
         border
         height='100%'
         v-loading="!userInfos"
+        :row-class-name="tableRowClassName"
       >
         <el-table-column label="CreatedTime" align='center'>
           <template slot-scope="scope">
@@ -51,7 +52,7 @@
         <el-table-column prop="roleDesc" label="Role" align='center' />
         <el-table-column label="Opertion" align='center' v-if='$hasPermission("PERMISSIONMENUEDIT,PERMISSIONMENUDELETE")'>
           <template slot-scope="scope">
-            <el-button size='mini' type='primary' @click.native='handleEdit(scope.row._id)' v-permission="'PERMISSIONMENUEDIT'">edit</el-button>
+            <el-button size='mini' type='primary' @click.native='handleEdit(scope.row._id, scope.row.role)' v-permission="'PERMISSIONMENUEDIT'">edit</el-button>
             <el-button size='mini' type='danger' :disabled='scope.row.role === "SUPERADMIN"' @click.native='handleDelete(scope.row._id)' v-permission="'PERMISSIONMENUDELETE'">delete</el-button>
           </template>
         </el-table-column>
@@ -72,6 +73,7 @@
     <EditPermissionDialog
       :editPermissionDialog='editPermissionDialog'
       :id='id'
+      :role='role'
       @closePermissionDialog='closePermissionDialog'
     />
     <!-- 新增弹窗 -->
@@ -113,6 +115,7 @@ export default {
         }
       },
       id: null,
+      role: null,
       editPermissionDialog: false,
       addPermissionDialog: false
     };
@@ -170,8 +173,9 @@ export default {
       this.getAllUserInfo();
     },
     // 编辑用户事件
-    handleEdit (id) {
+    handleEdit (id, role) {
       this.id = id;
+      this.role = role;
       this.editPermissionDialog = true;
     },
     // 删除用户事件
@@ -236,6 +240,11 @@ export default {
       this.theTimeRange = null;
       this.params.roleLevel = null;
       this.getAllUserInfo();
+    },
+    tableRowClassName({row, rowIndex}) {
+      if (row.role === "SUPERADMIN") {
+        return 'is-master';
+      }
     }
   },
   filters: {
@@ -270,6 +279,11 @@ export default {
     flex: 1;
     height: 100%;
     margin: 15px 0;
+    /deep/.el-table {
+      .is-master {
+        background-color: #f0f9eb;
+      }
+    }
   }
   .pagination-wrapper {
     height: 32px;

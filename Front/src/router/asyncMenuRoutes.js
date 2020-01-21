@@ -91,6 +91,15 @@ const asyncMenuRoutes = [
     },
     component: () => import('@/views/Permission/Menu/Menu'),
     children: null
+  },
+  {
+    path: '/Clipboard',
+    name: 'Clipboard',
+    meta: {
+      title: 'Clipboard'
+    },
+    component: () => import('@/views/Tools/Clipboard/Clipboard'),
+    children: null
   }
 ];
 

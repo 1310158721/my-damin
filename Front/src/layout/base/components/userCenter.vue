@@ -92,9 +92,7 @@ export default {
       }).catch(() => {});
     }
   },
-  created () {
-    console.log(this.$store.state.userInfo.avatar);
-  },
+  created () {},
   mounted () {},
   watch: {}
 };

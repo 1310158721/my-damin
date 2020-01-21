@@ -4,7 +4,7 @@
     <el-container id='app-right-aside' :class="[$store.state.isFixedHeader ? 'fixed-header' : 'release-header']">
       <MyHeader id='app-header' />
       <my-tab v-if='$store.state.isShowSystemTabView' />
-      <NyContent id='app-content' />
+      <NyContent id='app-content' :class="[$store.state.isShowSystemTabView ? 'is-show-tab-view' : 'not-show-tab-view']" />
     </el-container>
     <LayoutConfig />
   </el-container>
@@ -47,6 +47,14 @@ export default {
       display: block;
       min-height: 100%;
       overflow-y: auto;
+      .is-show-tab-view {
+        height: calc(100% - 50px - 32px) !important;
+        box-sizing: border-box;
+      }
+      .not-show-tab-view {
+        height: calc(100% - 50px) !important;
+        box-sizing: border-box;
+      }
     }
     &.fixed-header {
       height: 100%;

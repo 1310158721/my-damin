@@ -4,12 +4,17 @@ const Schema = mongoose.Schema;
 class MENU {
   constructor() {
     this.app = global.APP;
+    /**
+     * 数据库连接的状态
+     */
     this.db = mongoose.createConnection(
       `mongodb://127.0.0.1:${global.mongoPort}/allUser`,
       { useUnifiedTopology: true, useNewUrlParser: true }
     );
 
-    // 导航菜单数据结构 Schema
+    /**
+     * 导航菜单数据结构 Schema
+     */
     this.MenuListSchema = new Schema({
       title: String,
       disabled: Boolean,
@@ -18,10 +23,14 @@ class MENU {
       permission: String
     });
 
-    // 导航菜单数据 Model
+    /**
+     * 导航菜单数据 Model
+     */
     this.MenuListModel = this.db.model('menu_list', this.MenuListSchema);
 
-    // 用户数据结构 Schema
+    /**
+     * 用户数据结构 Schema
+     */
     this.UserSchema = new Schema({
       account: String,
       password: String,
@@ -35,16 +44,18 @@ class MENU {
       createdTime: Number
     });
 
-    // 用户数据 Model(表的名称不能大写)
+    /**
+     * 用户数据 Model(表的名称不能大写)
+     */
     this.UserModel = this.db.model('user_list', this.UserSchema);
   }
 
   /**
    * 删除没有权限值的导航菜单
-   * @param {已有的权限} hasPermission 
-   * @param {权限列表} list 
+   * @param {已有的权限} hasPermission
+   * @param {权限列表} list
    */
-  loopMatchList (hasPermission, list) {
+  loopMatchList(hasPermission, list) {
     for (let i = list.length - 1; i >= 0; i--) {
       if (!list[i].children) {
         if (!hasPermission.includes(list[i].permission)) {
@@ -57,10 +68,10 @@ class MENU {
   }
 
   /**
-   * 多次遍历删除空数组
-   * @param {权限列表} list 
+   * 多次遍历删除空数组，方便前端导航菜单的渲染
+   * @param {权限列表} list
    */
-  delEmptyArray (list) {
+  delEmptyArray(list) {
     for (let t = 0; t < 3; t++) {
       for (let i = list.length - 1; i >= 0; i--) {
         if (list[i].children !== null) {
@@ -74,9 +85,11 @@ class MENU {
     }
   }
 
-  // 将 buttons 转化为 children 传递给权限列表
+  /**
+   * 将 buttons 转化为 children 传递给权限列表
+   */
   dealListButtonsPermission(list) {
-    list.map((i) => {
+    list.map(i => {
       if (i.children && i.children.length) {
         this.dealListButtonsPermission(i.children);
       } else {
@@ -84,7 +97,7 @@ class MENU {
           i.children = i.buttons;
         }
       }
-    })
+    });
   }
 
   /**
@@ -94,45 +107,55 @@ class MENU {
     this.app.get('/api/getAllMenu', (req, res, next) => {
       const { token } = req.signedCookies;
       this.UserModel.find({ token })
-        .then((user) => {
+        .then(user => {
           if (user.length) {
-            const { role } = user[0]
             this.MenuListModel.find()
-              .then((doc) => {
+              .then(doc => {
                 if (!doc.length) {
                   res.send({
                     result: null,
                     status: 0,
                     msg: '获取菜单栏所有项失败'
-                  })
-                } else{
+                  });
+                } else {
+                  /**
+                   * 当前登录用户级别
+                   */
+                  const { role } = user[0];
+                  /**
+                   * 将 buttons 转化为 children 传递给权限列表
+                   */
                   this.dealListButtonsPermission(doc);
+                  /**
+                   * 当前用户不是 超级管理员，doc 不返回 权限管理模块的导航菜单
+                   * 菜单模块的修改只有 超级管理员 有权限
+                   */
                   if (role !== 'SUPERADMIN') {
-                    doc = doc.filter((i) => i.permission !== 'PERMISSIONMANAGE');
+                    doc = doc.filter(i => i.permission !== 'PERMISSIONMANAGE');
                   }
                   res.send({
                     result: doc,
                     status: 0,
                     msg: '获取菜单栏所有数据成功'
-                  })
+                  });
                 }
-              })
+              });
           } else {
             res.send({
               result: err,
               status: 400,
               msg: '获取用户信息失败'
-            })
+            });
           }
         })
-        .catch((err) => {
+        .catch(err => {
           res.send({
             result: err,
             status: 400,
             msg: '获取用户信息出错'
-          })
-        })
-    })
+          });
+        });
+    });
   }
 
   /**
@@ -143,42 +166,64 @@ class MENU {
       const { roleId, inside } = req.query;
       const { token } = req.signedCookies;
       const params = roleId ? { _id: roleId } : { token };
-      this.UserModel.find(params)
-        .then((doc) => {
-          if (!doc.length) {
-            res.send({
-              result: null,
-              status: 0,
-              msg: '暂无该用户信息'
+      this.UserModel.find(params).then(doc => {
+        if (!doc.length) {
+          res.send({
+            result: null,
+            status: 0,
+            msg: '暂无该用户信息'
+          });
+        } else {
+          const {
+            username,
+            desc,
+            permission,
+            role,
+            avatar,
+            mobile,
+            password,
+            account
+          } = doc[0];
+          const hasPermission = permission.split(',');
+          this.MenuListModel.find({}, { _id: 0 })
+            .sort({ order: 1 })
+            .then(list => {
+              if (!inside) {
+                this.loopMatchList(hasPermission, list);
+                this.delEmptyArray(list);
+              }
+              const result = inside
+                ? Object.assign(
+                    {},
+                    {
+                      list,
+                      username,
+                      desc,
+                      role,
+                      permission: permission ? permission.split(',') : [],
+                      avatar,
+                      mobile,
+                      password,
+                      account
+                    }
+                  )
+                : { list };
+              res.send({
+                result,
+                status: 0,
+                msg: '获取权限列表数据成功'
+              });
             })
-          } else {
-            const { username, desc, permission, role, avatar, mobile, password, account } = doc[0];
-            const hasPermission = permission.split(',');
-            this.MenuListModel
-              .find({}, { _id: 0 })
-              .sort({ order: 1 })
-              .then((list) => {
-                if (!inside) {
-                  this.loopMatchList(hasPermission, list);
-                  this.delEmptyArray(list);
-                }
-                const result = inside ? Object.assign({}, { list, username, desc, role, permission: permission ? permission.split(',') : [], avatar, mobile, password, account }) : {list};
-                res.send({
-                  result,
-                  status: 0,
-                  msg: '获取权限列表数据成功'
-                })
-              })
-              .catch((err) => {
-                res.send({
-                  result: err,
-                  status: 0,
-                  msg: '获取全权限列表数据失败'
-                })
-              })
-          }
-        })
-    })
+            .catch(err => {
+              res.send({
+                result: err,
+                status: 0,
+                msg: '获取全权限列表数据失败'
+              });
+            });
+        }
+      });
+    });
   }
 
   /**
