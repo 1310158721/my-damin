@@ -22,6 +22,7 @@ app.all('*', (req, res, next) => {
   if (req.method === 'OPTIONS') {
     return false;
   }
+  
   // 支持跨域
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
